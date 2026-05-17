@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn, getSession } from 'next-auth/react';
@@ -15,6 +15,13 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [comingSoon, setComingSoon] = useState(false);
+
+  // Auto-dismiss the error banner after 5s so it doesn't linger forever.
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(''), 5000);
+    return () => clearTimeout(t);
+  }, [error]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

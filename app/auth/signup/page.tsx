@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,6 +16,13 @@ export default function SignupPage() {
   const [errors, setErrors] = useState<Partial<Record<Fields, string>>>({});
   const [serverError, setServerError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Auto-dismiss the server error banner after 5s so it doesn't linger.
+  useEffect(() => {
+    if (!serverError) return;
+    const t = setTimeout(() => setServerError(''), 5000);
+    return () => clearTimeout(t);
+  }, [serverError]);
 
   const update = (key: Fields) => (value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));

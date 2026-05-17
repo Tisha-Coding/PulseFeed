@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  name  String?
+  password String
+  role  Role    @default(USER)
+
+  engagements Engagement[]
+  progress    Progress[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Content {
+  id           Int         @id @default(autoincrement())
+  title        String
+  slug         String      @unique @db.VarChar(255)
+  type         ContentType
+  description  String?
+  thumbnailUrl String?
+  videoUrl     String?
+  articleBody  String?
+  duration     Int?
+  readTime     Int?
+
+  viewCount     Int @default(0)
+  likeCount     Int @default(0)
+  bookmarkCount Int @default(0)
+
+  engagements Engagement[]
+  progress    Progress[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([type])
+  @@index([createdAt])
+  @@index([viewCount])
+  @@index([title])
+  @@index([description])
+}
+
+enum ContentType {
+  VIDEO
+  ARTICLE
+}
+
+model Engagement {
+  id        Int @id @default(autoincrement())
+  userId    Int
+  contentId Int
+
+  isLiked        Boolean @default(false)
+  isBookmarked Boolean @default(false)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, contentId])
+  @@index([userId])
+  @@index([contentId])
+}
+
+model Progress {
+  id        Int @id @default(autoincrement())
+  userId    Int
+  contentId Int
+
+  lastPosition Int     @default(0)
+  isCompleted  Boolean @default(false)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, contentId])
+  @@index([userId])
+  @@index([contentId])
+  @@index([isCompleted])
+}

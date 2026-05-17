@@ -122,13 +122,14 @@ html { scroll-behavior: smooth; }
   color: #e9d5ff;
 }
 
-/* ---- Themed horizontal scrollbar (Continue Watching/Reading rail) ---- */
+/* ---- Themed scrollbar — horizontal rails and scrollable modals ---- */
 .themed-scroll {
   scrollbar-width: thin;                                   /* Firefox */
   scrollbar-color: #c026d3 rgba(168, 85, 247, 0.12);       /* Firefox */
 }
 .themed-scroll::-webkit-scrollbar {
-  height: 8px;
+  width: 8px;   /* vertical scrollbars (e.g. modals) */
+  height: 8px;  /* horizontal scrollbars (e.g. the Continue rail) */
 }
 .themed-scroll::-webkit-scrollbar-track {
   background: rgba(168, 85, 247, 0.12);

@@ -396,7 +396,7 @@ export default function AdminDashboard() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 30, scale: 0.97 }}
               onClick={(e) => e.stopPropagation()}
-              className="glass rounded-[2rem] w-full max-w-lg max-h-[88vh] overflow-y-auto p-6 sm:p-8 shadow-2xl shadow-purple-500/20"
+              className="themed-scroll glass rounded-[2rem] w-full max-w-lg max-h-[88vh] overflow-y-auto p-6 sm:p-8 shadow-2xl shadow-purple-500/20"
             >
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5">
                 {editing ? 'Edit content' : 'Create new content'}

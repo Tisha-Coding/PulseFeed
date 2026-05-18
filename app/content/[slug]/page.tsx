@@ -332,6 +332,28 @@ function isYouTube(url: string): boolean {
   return /(?:youtube\.com|youtu\.be)/i.test(url);
 }
 
+// Seek a player to `seconds` — but only once the media metadata is loaded.
+// Seeking before `loadedmetadata` is silently ignored by the browser (it
+// doesn't yet know the video's duration/seekable range), which is why a
+// resumed video would otherwise start from 0. `seekedRef` is flipped to true
+// only AFTER the seek actually lands, so a too-early call can't "use up" the
+// one-shot resume.
+function resumeVideoTo(
+  player: ReturnType<typeof videojs>,
+  seconds: number,
+  seekedRef: { current: boolean },
+) {
+  if (seconds <= 0 || seekedRef.current) return;
+  const apply = () => {
+    if (seekedRef.current) return;
+    player.currentTime(seconds);
+    seekedRef.current = true;
+  };
+  // readyState >= 1 (HAVE_METADATA) → safe to seek right now; else wait.
+  if ((player.readyState() ?? 0) >= 1) apply();
+  else player.one('loadedmetadata', apply);
+}
+
 function VideoPlayer({
   content,
   loggedIn,
@@ -375,11 +397,11 @@ function VideoPlayer({
         if (!active || !j.success || !j.data || j.data.lastPosition <= 0) return;
         savedPosRef.current = j.data.lastPosition;
         setRestoredAt(j.data.lastPosition);
+        // If the player already exists, resume now; resumeVideoTo waits for
+        // metadata internally. If it doesn't exist yet, the init effect below
+        // picks up savedPosRef once the player is created.
         const p = playerRef.current;
-        if (p && !seekedRef.current) {
-          p.currentTime(j.data.lastPosition);
-          seekedRef.current = true;
-        }
+        if (p) resumeVideoTo(p, j.data.lastPosition, seekedRef);
       })
       .catch(() => {});
     return () => {
@@ -390,6 +412,10 @@ function VideoPlayer({
   // Initialise video.js once; dispose + flush progress on unmount.
   useEffect(() => {
     if (!url || playerRef.current || !containerRef.current) return;
+
+    // Show only real errors — silences video.js deprecation WARN noise
+    // (e.g. the videojs-youtube plugin's use of the deprecated createTimeRange).
+    videojs.log.level('error');
 
     const videoEl = document.createElement('video-js');
     videoEl.classList.add('vjs-big-play-centered');
@@ -407,12 +433,25 @@ function VideoPlayer({
     });
     playerRef.current = player;
 
-    player.ready(() => {
+    // Once the metadata is loaded: resume to the saved point (if known by
+    // then), then start MUTED autoplay. We drive play() ourselves instead of
+    // the `autoplay` option — that option races the resume seek and often
+    // leaves the video paused. Browsers allow autoplay only while muted; the
+    // viewer unmutes via the player's volume control. The play() promise can
+    // still reject on strict browsers, so it is caught harmlessly.
+    const beginPlayback = () => {
       if (savedPosRef.current > 0 && !seekedRef.current) {
         player.currentTime(savedPosRef.current);
         seekedRef.current = true;
       }
-    });
+      player.muted(true);
+      const playPromise = player.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(() => {});
+      }
+    };
+    if ((player.readyState() ?? 0) >= 1) beginPlayback();
+    else player.one('loadedmetadata', beginPlayback);
 
     player.on('timeupdate', () => {
       const t = player.currentTime() ?? 0;

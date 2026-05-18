@@ -117,12 +117,35 @@ export default function AdminDashboard() {
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
+
+    const isVideo = form.type === 'VIDEO';
+
+    // Required-field validation. Only the title is required for both types;
+    // video/article-specific fields are required only for their own type.
+    // Description and thumbnail stay optional.
     if (form.title.trim().length < 3) {
       setFormError('Title must be at least 3 characters.');
       return;
     }
-
-    const isVideo = form.type === 'VIDEO';
+    if (isVideo) {
+      if (!form.videoUrl.trim()) {
+        setFormError('Video URL is required for a video.');
+        return;
+      }
+      if (!(Number(form.duration) > 0)) {
+        setFormError('Duration (in seconds) is required for a video.');
+        return;
+      }
+    } else {
+      if (!form.articleBody.trim()) {
+        setFormError('Article body is required for an article.');
+        return;
+      }
+      if (!(Number(form.readTime) > 0)) {
+        setFormError('Read time (in minutes) is required for an article.');
+        return;
+      }
+    }
     const payload: Record<string, unknown> = {
       title: form.title.trim(),
       type: form.type,

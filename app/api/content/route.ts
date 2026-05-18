@@ -11,16 +11,37 @@ const feedQuerySchema = z.object({
   sort: z.enum(["trending", "latest"]).optional(),
 });
 
-const createContentSchema = z.object({
-  title: z.string().min(3, "Title must be at least 3 characters"),
-  type: z.enum(["VIDEO", "ARTICLE"]),
-  description: z.string().optional(),
-  thumbnailUrl: z.string().optional(),
-  videoUrl: z.string().optional(),
-  articleBody: z.string().optional(),
-  duration: z.number().optional(),
-  readTime: z.number().optional(),
-});
+// Only the title is required for both types; description and thumbnail are
+// optional. Video/article-specific fields are required only for their own
+// type — the `.refine()` chain enforces that server-side, so a UI bypass
+// can't create half-formed content.
+const createContentSchema = z
+  .object({
+    title: z.string().min(3, "Title must be at least 3 characters"),
+    type: z.enum(["VIDEO", "ARTICLE"]),
+    description: z.string().optional(),
+    thumbnailUrl: z.string().optional(),
+    videoUrl: z.string().optional(),
+    articleBody: z.string().optional(),
+    duration: z.number().optional(),
+    readTime: z.number().optional(),
+  })
+  .refine((d) => d.type !== "VIDEO" || !!d.videoUrl?.trim(), {
+    message: "Video URL is required for a video",
+    path: ["videoUrl"],
+  })
+  .refine((d) => d.type !== "VIDEO" || (d.duration ?? 0) > 0, {
+    message: "Duration is required for a video",
+    path: ["duration"],
+  })
+  .refine((d) => d.type !== "ARTICLE" || !!d.articleBody?.trim(), {
+    message: "Article body is required for an article",
+    path: ["articleBody"],
+  })
+  .refine((d) => d.type !== "ARTICLE" || (d.readTime ?? 0) > 0, {
+    message: "Read time is required for an article",
+    path: ["readTime"],
+  });
 
 // GET - cursor-paginated discovery feed.
 export async function GET(request: NextRequest) {
